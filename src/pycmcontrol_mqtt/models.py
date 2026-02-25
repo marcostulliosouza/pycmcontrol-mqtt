@@ -78,7 +78,7 @@ class Apontamento:
 
         if self.evidencias:
             d["evidencias"] = [e.to_dict() for e in self.evidencias]
-        return d
+        return dgt
 
 
 @dataclass(frozen=True)
