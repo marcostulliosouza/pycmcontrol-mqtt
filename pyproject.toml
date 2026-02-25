@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pycmcontrol-mqtt"
+version = "0.1.0"
+description = "Cliente MQTT para Driver CmControl v1.00 (MQTT + MQTT+REST + OAuth2) com QoS=0 e retained=false"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "Marcos Tullio Silva de Souza", email = "marcostullio.s@gmail.com" }]
+dependencies = [
+  "paho-mqtt>=1.6"
+]
+
+[project.optional-dependencies]
+env = ["python-dotenv>=1.0"]
+
+[project.urls]
+Repository = "https://github.com/marcostulliosouza/pycmcontrol-mqtt"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pycmcontrol_mqtt"]
