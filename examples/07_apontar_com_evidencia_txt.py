@@ -11,7 +11,7 @@ cfg = cfg_from_env_or_defaults()
 evi = Evidence.from_text(
     nome="log_teste",
     extensao="txt",
-    conteudo_texto="Teste de evidência do pycmcontrol-mqtt",
+    texto="Teste de evidência do pycmcontrol-mqtt",
     descricao="Log de teste",
 )
 
