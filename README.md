@@ -78,7 +78,7 @@ cmc.logout_oauth2()
 
 ---
 
-## 📡 Eventos obrigatórios do driver
+## Eventos obrigatórios do driver
 
 Quando conectado, o cliente responde automaticamente:
 
