@@ -8,10 +8,14 @@ cfg = cfg_from_env_or_defaults()
 
 try:
     with CmControlClient(cfg, debug=True) as cmc:
+
         print("Conectado ao broker. Device online publicado.")
 except CmcMqttAuthError as e:
+    print(cfg)
     print("Auth MQTT falhou:", e)
 except CmcConnectionTimeout as e:
+    print(cfg)
     print("Timeout conexão:", e)
 except CmcConnectionError as e:
+    print(cfg)
     print("Falha conexão:", e)
