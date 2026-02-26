@@ -45,9 +45,10 @@ except (CmcConnectionTimeout, CmcConnectionError) as e:
 
 # 3) Login inválido (precisa broker real)
 # Rode somente se tiver broker válido:3
-# cfg_real = cfg_from_env_or_defaults() # configure com o usuário ou senha de maneira incorreta para validar os erros.
-# with CmControlClient(cfg_real, debug=True) as cmc:
-#     try:
-#         cmc.login_oauth2()
-#     except CmcLoginError as e:
-#         print("[OK] Login erro:", e.status, e.log)
+cfg_real = cfg_from_env_or_defaults() # configure com o usuário ou senha de maneira incorreta para validar os erros.
+with CmControlClient(cfg_real, debug=True) as cmc:
+    try:
+        if cmc.login_oauth2():
+            cmc.logout_oauth2()
+    except CmcLoginError as e:
+        print("[OK] Login erro:", e.status, e.log)
