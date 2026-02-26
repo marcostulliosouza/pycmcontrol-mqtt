@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pycmcontrol-mqtt"
-version = "0.1.9"
+version = "0.2.0"
 description = "Cliente MQTT para Driver CmControl v1.00 (MQTT + MQTT+REST + OAuth2) com QoS=0 e retained=false"
 readme = "README.md"
 license = { file = "LICENSE" }
