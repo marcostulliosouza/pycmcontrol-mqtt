@@ -441,6 +441,44 @@ class CmControlClient:
     def __exit__(self, exc_type, exc, tb):
         self.disconnect()
 
+    def ping(self, timeout_s: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Dispositivo -> Sistema:
+          SET  .../set/ping  { "timestamp": <int> }
+        Sistema -> Dispositivo:
+          GET  .../get/pong
+        """
+        self._raise_if_disconnected()
+
+        timeout = self.request_timeout_s_default if timeout_s is None else float(timeout_s)
+
+        # resposta correta é /get/pong
+        resp_topic = self.topic_get("pong")
+
+        # limpa cache antiga de pong
+        with self._rx_cv:
+            self._rx_cache.pop(resp_topic, None)
+
+        payload = {"timestamp": now_ts()}
+
+        # publica /set/ping
+        self.publish_set("ping", payload)
+
+        end = time.time() + timeout
+        with self._rx_cv:
+            while True:
+                self._raise_if_disconnected()
+
+                if resp_topic in self._rx_cache:
+                    resp = self._rx_cache[resp_topic]
+                    self._last_response = {"topic": resp_topic, "payload": resp, "ts": now_ts()}
+                    return resp
+
+                remaining = end - time.time()
+                if remaining <= 0:
+                    raise CmcTimeout(f"Timeout aguardando resposta em {resp_topic}")
+                self._rx_cv.wait(timeout=remaining)
+
     # -----------------------------
     # OAuth2 (MQTT+REST)
     # -----------------------------
