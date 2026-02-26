@@ -83,6 +83,7 @@ class CmControlClient:
         business_error_prefixes: tuple[str, ...] = ("ERRO",),
         business_error_contains: tuple[str, ...] = ("FALHA", "NOK"),
         business_ok_prefixes: tuple[str, ...] = ("ERRO4",),  # ex: "já apontado" tratar como ok
+        debug: bool = False
     ):
         self.cfg = cfg
         self.tls = tls
@@ -120,6 +121,9 @@ class CmControlClient:
         # Se on_connect detecta rc != 0, guardamos aqui para levantar no connect()
         self._connect_error: Optional[CmcError] = None
 
+        self.debug = bool(debug)
+        self._last_request: Optional[Dict[str, Any]] = None
+        self._last_response: Optional[Dict[str, Any]] = None
     # -----------------------------
     # Topics
     # -----------------------------
@@ -226,21 +230,26 @@ class CmControlClient:
         c.publish(self.topic_set(endpoint), json.dumps(payload), qos=0, retain=False)
 
     def request(self, endpoint: str, payload: Any, timeout_s: Optional[float] = None) -> Dict[str, Any]:
-        """
-        REQUEST: /set/{endpoint}
-        RESPONSE: /get/{endpoint}
-
-        Usa cache por tópico e aguarda até timeout.
-        """
         self._raise_if_disconnected()
 
         timeout = self.request_timeout_s_default if timeout_s is None else float(timeout_s)
         resp_topic = self.topic_get(endpoint)
 
         with self._req_lock:
-            # limpa cache anterior deste endpoint
             with self._rx_cv:
                 self._rx_cache.pop(resp_topic, None)
+
+            self._last_request = {
+                "endpoint": endpoint,
+                "set_topic": self.topic_set(endpoint),
+                "get_topic": resp_topic,
+                "payload": payload,
+                "ts": now_ts(),
+            }
+
+            if self.debug:
+                print(f"[pycmcontrol] -> SET {self._last_request['set_topic']}")
+                # cuidado para não vazar token em log; se quiser, mascare aqui
 
             self.publish_set(endpoint, payload)
 
@@ -250,7 +259,14 @@ class CmControlClient:
                     self._raise_if_disconnected()
 
                     if resp_topic in self._rx_cache:
-                        return self._rx_cache[resp_topic]
+                        resp = self._rx_cache[resp_topic]
+                        self._last_response = {"topic": resp_topic, "payload": resp, "ts": now_ts()}
+
+                        if self.debug:
+                            print(
+                                f"[pycmcontrol] <- GET {resp_topic} status={resp.get('status')} log={resp.get('log')}")
+
+                        return resp
 
                     remaining = end - time.time()
                     if remaining <= 0:
@@ -261,17 +277,14 @@ class CmControlClient:
     # MQTT callbacks
     # -----------------------------
     def _on_connect(self, client, userdata, flags, rc):
-        # rc=0 OK
         if rc != 0:
-            # Não levanta exception aqui (thread do paho); salva para o connect() tratar
             self._connect_error = CmcMqttAuthError(rc=rc)
             self._connected.set()
             return
 
-        # Subscribe /get/+
-        client.subscribe(f"{self.base_topic()}/get/+", qos=0)
+        # ✅ precisa ser # por causa dos endpoints com "/" (rest/oauth2/login, rest/api/v1/...)
+        client.subscribe(f"{self.base_topic()}/get/#", qos=0)
 
-        # Opcional: estado online
         try:
             self.publish_set("state", {"state": "1"})
         except Exception:
@@ -281,8 +294,9 @@ class CmControlClient:
 
     def _on_disconnect(self, client, userdata, rc):
         self._disconnect_rc = rc
-        # rc != 0 geralmente indica queda anormal
-        self._disconnected.set()
+        # rc=0 = desconexão normal (não é queda)
+        if rc != 0:
+            self._disconnected.set()
 
     def _on_message(self, client, userdata, msg):
         topic = msg.topic
@@ -509,12 +523,11 @@ class CmControlClient:
             }
         }
 
-        resp = self.request("rest/oauth2/logout", payload, timeout_s=timeout_s)
+        try:
+            resp = self.request("rest/oauth2/logout", payload, timeout_s=timeout_s)
+        except (CmcDisconnected, CmcTimeout, CmcConnectionError):
+            resp = {"status": "0", "log": "Logout não enviado (MQTT desconectado/timeout)"}
 
-        # logout pode ser best-effort; se quiser validar, descomente:
-        # self._ensure_status_ok(endpoint="rest/oauth2/logout", resp=resp, err_cls=CmcApiError)
-
-        # limpa token local
         with self._tok_lock:
             self._access_token = None
             self._token_expiration_ts = None
@@ -639,3 +652,10 @@ class CmControlClient:
                 time.sleep(float(delay_s))
 
         return out
+
+    def last_exchange(self) -> Dict[str, Any]:
+        return {
+            "last_request": self._last_request,
+            "last_response": self._last_response,
+            "disconnect_rc": self._disconnect_rc,
+        }

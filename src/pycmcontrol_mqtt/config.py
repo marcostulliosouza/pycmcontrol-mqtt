@@ -32,7 +32,7 @@ class CmControlConfig:
     def from_env(cls, env_path: Optional[str] = None, prefix: str = "CMC_") -> "CmControlConfig":
         """
         Helper opcional (NÃO obrigatório).
-        Para usar .env: pip install cmcontrol-mqtt[env]
+        Para usar .env: pip install pycmcontrol_mqtt[env]
         """
         if env_path:
             try:

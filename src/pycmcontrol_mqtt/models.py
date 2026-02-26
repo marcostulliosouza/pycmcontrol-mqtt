@@ -1,4 +1,6 @@
 from __future__ import annotations
+import base64
+from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +21,7 @@ class Evidence:
       - descricao (opcional)
       - observacao (opcional)
     """
+
     nome: str
     extensao: str
     conteudo: str
@@ -36,7 +39,42 @@ class Evidence:
         if self.observacao:
             d["observacao"] = self.observacao
         return d
+    @staticmethod
+    def from_text(
+        *,
+        nome: str,
+        extensao: str,
+        texto: str,
+        descricao: str = "",
+        observacao: str = "",
+        encoding: str = "utf-8",
+    ) -> "Evidence":
+        conteudo = base64.b64encode(texto.encode(encoding)).decode("ascii")
+        return Evidence(
+            nome=nome,
+            extensao=extensao,
+            conteudo=conteudo,
+            descricao=descricao,
+            observacao=observacao,
+        )
 
+    @staticmethod
+    def from_file(
+        path: str | Path,
+        *,
+        nome: str | None = None,
+        extensao: str | None = None,
+        descricao: str = "",
+        observacao: str = "",
+    ) -> "Evidence":
+        p = Path(path)
+        data = p.read_bytes()
+        b64 = base64.b64encode(data).decode("ascii")
+        n = nome or p.stem
+        ext = extensao or p.suffix.lstrip(".")
+        if not ext:
+            raise ValueError("Arquivo sem extensão. Informe 'extensao=' explicitamente.")
+        return Evidence(nome=n, extensao=ext, conteudo=b64, descricao=descricao, observacao=observacao)
 
 @dataclass(frozen=True)
 class OrdemTransporte:
@@ -78,7 +116,7 @@ class Apontamento:
 
         if self.evidencias:
             d["evidencias"] = [e.to_dict() for e in self.evidencias]
-        return dgt
+        return d
 
 
 @dataclass(frozen=True)
