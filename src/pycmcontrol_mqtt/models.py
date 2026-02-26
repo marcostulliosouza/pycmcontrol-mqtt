@@ -129,15 +129,16 @@ class SetupApontamento:
       - apontamentos: lista de Apontamento (obrigatório)
     """
     enderecoDispositivo: str
-    apontamentos: List[Apontamento]
+    apontamentos: Optional[List[Apontamento]] = None
     ciclo: str = ""
     ordemTransporte: Optional[OrdemTransporte] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        d: Dict[str, Any] = {
-            "enderecoDispositivo": self.enderecoDispositivo,
-            "apontamentos": [a.to_dict() for a in self.apontamentos],
-        }
+        d: Dict[str, Any] = {"enderecoDispositivo": self.enderecoDispositivo}
+
+        if self.apontamentos is not None:
+            d["apontamentos"] = [a.to_dict() for a in self.apontamentos]
+
         if self.ciclo:
             d["ciclo"] = self.ciclo
         if self.ordemTransporte:

@@ -4,8 +4,6 @@ from _common import cfg_from_env_or_defaults
 from pycmcontrol_mqtt import CmControlClient, SetupApontamento, Apontamento, Serial
 from pycmcontrol_mqtt.errors import CmcApontamentoError
 
-# ⚠️ Vinculação: faz sentido para 2 seriais (ou N seriais dependendo da operação),
-# mas NÃO é lote "normal". Aqui é exemplo fiel à doc.
 S1 = "00000203030300"
 S2 = "506080999"
 

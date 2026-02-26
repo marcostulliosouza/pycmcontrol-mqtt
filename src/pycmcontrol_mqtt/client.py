@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 
 from .config import CmControlConfig
 from .utils import now_ts, b64
-from .models import SetupApontamento, Apontamento, Serial, Evidence
+from .models import SetupApontamento, Apontamento, Serial, Evidence, OrdemTransporte
 
 from .errors import (
     CmcError,
@@ -619,6 +619,7 @@ class CmControlClient:
     # -----------------------------
     # Helpers de uso (um serial por request)
     # -----------------------------
+
     def apontar_serial(
         self,
         serial: str,
@@ -697,3 +698,18 @@ class CmControlClient:
             "last_response": self._last_response,
             "disconnect_rc": self._disconnect_rc,
         }
+
+    def ordem_transporte(
+            self,
+            codigo: str,
+            *,
+            acao: str = "APONTAR_TRANSPORTE",
+            timeout_s: Optional[float] = None,
+            apontamentos: Optional[list[Apontamento]] = None,
+    ) -> Dict[str, Any]:
+        setup = SetupApontamento(
+            enderecoDispositivo=self.cfg.device_addr,
+            ordemTransporte=OrdemTransporte(codigo=codigo, acao=acao),
+            apontamentos=apontamentos,
+        )
+        return self.setup_apontamento(setup, timeout_s=timeout_s)
