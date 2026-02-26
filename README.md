@@ -1,33 +1,43 @@
 # pycmcontrol-mqtt
 
-Biblioteca Python para integração com o Driver Dispositivo CmControl v1.00 via MQTT, implementando com base no protocolo oficial do sistema.
+Biblioteca Python para integração com o **Driver Dispositivo CmControl v1.00** via MQTT, implementando o protocolo oficial do sistema.
 
-A biblioteca encapsula toda a comunicação MQTT + MQTT+REST + OAuth2, permitindo que aplicações Python atuem como um dispositivo CmControl totalmente compatível.
+Permite que aplicações Python atuem como um dispositivo CmControl totalmente compatível, suportando comunicação MQTT nativa, proxy MQTT+REST e autenticação OAuth2.
+
+---
 
 ## Recursos
 
-- Comunicação MQTT conforme especificação do Driver v1.00
-- Subscrição automática em .../get/#
-- Publicação com QoS = 0 e retained = false
-- Resposta automática aos eventos obrigatórios:
-  - PING → PONG 
-  - STATE → envio de estado online 
-- Suporte ao proxy MQTT+REST (set/rest/...)
-- Autenticação OAuth2 (Basic → Bearer)
-- Execução de endpoints REST via MQTT
-- Endpoint de apontamento setup.apontamento
-- Envio de seriais, evidências e estruturas completas
-- Tratamento robusto de erros de rede, MQTT, timeout e negócio
-- Cliente context manager (with)
-- Debug opcional com log das trocas MQTT
-- Tipagem estática (PEP 561 — pacote typed)
+* Comunicação MQTT conforme especificação oficial do driver
+* Subscrição automática em `.../get/#`
+* Publicação com QoS = 0 e retained = false
+* Handlers automáticos obrigatórios:
+
+  * PING → PONG
+  * STATE → status online
+* Suporte completo ao proxy MQTT+REST
+* Autenticação OAuth2 (Basic → Bearer JWT)
+* Execução de endpoints REST via MQTT
+* Apontamentos (`setup.apontamento`)
+* Envio de seriais e evidências
+* Tratamento robusto de erros de rede e negócio
+* Cliente context manager (`with`)
+* Debug detalhado opcional
+* Tipagem estática (PEP 561)
+* Compatível com TLS
+
+---
 
 ## Instalação
+
 ```bash
 pip install pycmcontrol-mqtt
 ```
-## Uso básico
-Configuração e conexão
+
+---
+
+## Uso rápido
+
 ```python
 from pycmcontrol_mqtt import CmControlClient, CmControlConfig
 
@@ -41,26 +51,36 @@ cfg = CmControlConfig(
     api_pass="api_pass",
 )
 
-with CmControlClient(cfg) as cmc:
+with CmControlClient(cfg, debug=True) as cmc:
     cmc.ensure_login()
 ```
+
+---
 
 ## Autenticação OAuth2 (MQTT+REST)
 
-A biblioteca executa automaticamente o fluxo:
-1. Login BASIC → obtenção de token JWT
-2. Uso do token Bearer nas requisições REST via MQTT
+O cliente executa automaticamente:
+
+1. Login BASIC
+2. Recebimento de token JWT
+3. Uso de Bearer Token nas chamadas REST
+
 ```python
 with CmControlClient(cfg) as cmc:
     cmc.ensure_login()
 ```
+
 Logout opcional:
+
 ```python
 cmc.logout_oauth2()
 ```
-## Eventos obrigatórios do driver
 
-O cliente responde automaticamente quando conectado:
+---
+
+## 📡 Eventos obrigatórios do driver
+
+Quando conectado, o cliente responde automaticamente:
 
 | Evento recebido | Resposta enviada           |
 | --------------- | -------------------------- |
@@ -69,16 +89,94 @@ O cliente responde automaticamente quando conectado:
 
 Também envia `state=1` ao conectar.
 
-## Apontamento simples (serializado)
-```python
-from pycmcontrol_mqtt import CmControlClient
+---
 
+## O que você pode fazer com CmControlClient
+
+### Ciclo de vida
+
+Criação do cliente (sem conectar):
+
+```python
+cmc = CmControlClient(cfg, debug=True)
+```
+
+Opções importantes:
+
+* `debug=True` → log detalhado de trocas MQTT
+* `request_timeout_s_default` → timeout padrão
+* `strict_business_errors` → transforma erros de negócio em exceção
+
+---
+
+### Conexão
+
+* `connect()` → conecta e envia `state=1`
+* `disconnect()` → envia `state=0` e desconecta
+
+Uso recomendado com context manager:
+
+```python
+with CmControlClient(cfg) as cmc:
+    ...
+```
+
+---
+
+### Comunicação MQTT direta
+
+* `publish_set(endpoint, payload)`
+* `request(endpoint, payload, timeout_s=None)`
+* `ping(timeout_s=None)`
+
+Implementa o padrão RPC do driver:
+
+```
+SET → GET correspondente
+```
+
+---
+
+### OAuth2
+
+* `login_oauth2()`
+* `ensure_login()`
+* `logout_oauth2()`
+* `token()`
+* `is_token_valid()`
+
+---
+
+### Apontamento
+
+* `setup_apontamento(setup)`
+* `apontar_serial(serial, evidencias=None)`
+* `validar_rota(serial)`
+* `apontar_lote_1porreq(seriais)`
+
+---
+
+### Debug e diagnóstico
+
+```python
+print(cmc.last_exchange())
+```
+
+Retorna a última troca MQTT completa.
+
+---
+
+## Apontamento simples
+
+```python
 with CmControlClient(cfg) as cmc:
     cmc.ensure_login()
     resp = cmc.apontar_serial("00000203030300")
     print(resp)
 ```
+
 Payload equivalente:
+
 ```json
 {
   "enderecoDispositivo": "device001",
@@ -92,8 +190,13 @@ Payload equivalente:
   ]
 }
 ```
+
+---
+
 ## Apontamento com evidência
-Evidência a partir de texto
+
+### Evidência a partir de texto
+
 ```python
 from pycmcontrol_mqtt import Evidence
 
@@ -104,41 +207,61 @@ evi = Evidence.from_text(
     descricao="Log de teste"
 )
 
-with CmControlClient(cfg) as cmc:
-    cmc.ensure_login()
-    cmc.apontar_serial("00000203030300", evidencias=[evi])
+cmc.apontar_serial("00000203030300", evidencias=[evi])
 ```
-Evidência a partir de arquivo
+
+### Evidência a partir de arquivo
+
 ```python
 evi = Evidence.from_file("foto.png")
 
 cmc.apontar_serial("00000203030300", evidencias=[evi])
 ```
+
+---
+
 ## Validação de rota
+
 ```python
-serial = "00000203030300"
-resp = cmc.validar_rota(serial)
+resp = cmc.validar_rota("00000203030300")
 ```
-## Apontamento em lote (1 serial por requisição)
+
+---
+
+## Apontamento em lote
+
+Um serial por requisição:
+
 ```python
 seriais = ["001", "002", "003"]
 
-resp = cmc.apontar_lote_1porreq(seriais)
+cmc.apontar_lote_1porreq(seriais)
 ```
-# Debug das trocas MQTT
 
-Ative logs detalhados:
+---
+
+## Debug detalhado
+
+Ative logs de comunicação:
+
 ```python
 with CmControlClient(cfg, debug=True) as cmc:
     cmc.ensure_login()
 ```
-Exemplo de saída:
-```terminaloutput
-[pycmcontrol] -> SET br/com/cmcontrol/dispositivo/device001/set/rest/oauth2/login
-[pycmcontrol] <- GET br/com/cmcontrol/dispositivo/device001/get/rest/oauth2/login status=200 log=OK
+
+Exemplo:
+
 ```
+[pycmcontrol] -> SET .../set/rest/oauth2/login
+[pycmcontrol] <- GET .../get/rest/oauth2/login status=200 log=OK
+```
+
+---
+
 ## Tratamento de erros
-A biblioteca fornece exceções específicas:
+
+Exceções específicas:
+
 ```python
 from pycmcontrol_mqtt.errors import (
     CmcConnectionError,
@@ -164,23 +287,31 @@ except CmcApontamentoError as e:
 except CmcTimeout:
     print("Timeout aguardando resposta")
 ```
+
+---
+
 ## Inspeção da última troca MQTT
 
-Útil para diagnóstico:
 ```python
 print(cmc.last_exchange())
 ```
-Retorna:
-```terminaloutput
+
+Retorno:
+
+```bash
 {
   "last_request": {...},
   "last_response": {...},
   "disconnect_rc": None
 }
 ```
-## Configuração TLS (opcional)
 
-Para brokers MQTT seguros (porta 8883):
+---
+
+## TLS (opcional)
+
+Para brokers seguros (porta 8883):
+
 ```python
 from pycmcontrol_mqtt import BrokerTLS
 
@@ -193,25 +324,36 @@ tls = BrokerTLS(
 with CmControlClient(cfg, tls=tls) as cmc:
     cmc.ensure_login()
 ```
+
+---
+
 ## Estrutura do pacote
+
 ```bash
 pycmcontrol_mqtt/
  ├── client.py
  ├── config.py
  ├── models.py
  ├── errors.py
- ├── utils.py
- └── py.typed
+ └── utils.py
 ```
+
+---
+
 ## Requisitos
 
-- Python ≥ 3.9 
-- Broker MQTT compatível com CmControl 
-- Dispositivo previamente cadastrado no sistema
+* Python ≥ 3.9
+* Broker MQTT compatível com CmControl
+* Dispositivo previamente cadastrado no sistema
+
+---
 
 ## Licença
 
-[MIT License](LICENSE)
+Distribuído sob licença MIT. Acesse [LICENSE](LICENSE) para mais informações.
+
+---
 
 ## Autor
-Marcos Tullio Silva de Souza
+
+**Marcos Tullio Silva de Souza**
