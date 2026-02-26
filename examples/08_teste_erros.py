@@ -7,6 +7,7 @@ from pycmcontrol_mqtt.errors import (
     CmcConnectionError,
     CmcLoginError,
 )
+from _common import cfg_from_env_or_defaults
 
 # 1) DNS inválido => CmcDnsError
 cfg_dns = CmControlConfig(
@@ -43,7 +44,8 @@ except (CmcConnectionTimeout, CmcConnectionError) as e:
     print("[OK] Conexão/timeout capturado:", e)
 
 # 3) Login inválido (precisa broker real)
-# Rode somente se tiver broker válido:
+# Rode somente se tiver broker válido:3
+# cfg_real = cfg_from_env_or_defaults() # configure com o usuário ou senha de maneira incorreta para validar os erros.
 # with CmControlClient(cfg_real, debug=True) as cmc:
 #     try:
 #         cmc.login_oauth2()
