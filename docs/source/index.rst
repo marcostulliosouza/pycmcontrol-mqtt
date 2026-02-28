@@ -1,17 +1,30 @@
-.. pycmcontrol-mqtt documentation master file, created by
-   sphinx-quickstart on Sat Feb 28 18:37:37 2026.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+pycmcontrol-mqtt
+================
 
-pycmcontrol-mqtt documentation
-==============================
+Biblioteca Python para integração com o **Driver Dispositivo CmControl v1.00** via MQTT,
+implementando o protocolo oficial do sistema.
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+Permite que aplicações Python atuem como um dispositivo CmControl totalmente compatível,
+suportando:
 
+- Comunicação MQTT nativa
+- Proxy MQTT + REST
+- Autenticação OAuth2
+- Apontamento de seriais
+- Envio de evidências
+- TLS
+- Tipagem estática (PEP 561)
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Conteúdo
 
+   installation
+   quickstart
+   oauth2
+   mqtt
+   apontamento
+   errors
+   tls
+   api
+   structure
